@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blood Donor Finder – Staff Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; color:#333; }
+    header { background:#c62828; color:#fff; padding:1rem; text-align:center; }
+    nav { background:#e0e0e0; padding:0.5rem; display:flex; gap:1rem; justify-content:center; }
+    nav button { background:#fff; border:1px solid #ccc; padding:0.5rem 1rem; cursor:pointer; }
+    main { padding:1rem; max-width:960px; margin:auto; }
+    .card { background:#fff; border-radius:4px; padding:1rem; margin-bottom:1rem; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:1rem; }
+    .toast { position:fixed; bottom:1rem; right:1rem; background:#323232; color:#fff; padding:0.75rem 1.25rem; border-radius:4px; opacity:0; transition:opacity 0.3s; }
+    .toast.show { opacity:1; }
+    .dark-mode { background:#212121; color:#e0e0e0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Blood Donor Finder – Staff Dashboard</h1>
+  </header>
+  <nav>
+    <button id="btnStats">Stats</button>
+    <button id="btnRequests">Requests</button>
+    <button id="btnDonors">Donors</button>
+    <button id="toggleTheme">Toggle Dark</button>
+  </nav>
+  <main id="content">
+    <p>Loading...</p>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script>
+    const API = "http://localhost:3000/api";
+    const content = document.getElementById('content');
+    const toast = document.getElementById('toast');
+    const showToast = (msg)=>{ toast.textContent=msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),3000); };
+    const loadStats = async()=>{
+      const res = await fetch(`${API}/stats`); const data = await res.json();
+      content.innerHTML = `<h2>Recent Stats</h2><pre>${JSON.stringify(data,null,2)}</pre>`;
+    };
+    const loadRequests = async()=>{
+      const res = await fetch(`${API}/requests`); // placeholder – endpoint not yet implemented
+      const data = await res.json().catch(()=>[]);
+      content.innerHTML = `<h2>Hospital Requests (demo)</h2><pre>${JSON.stringify(data,null,2)}</pre>`;
+    };
+    const loadDonors = async()=>{
+      const res = await fetch(`${API}/donors`);
+      const donors = await res.json();
+      const html = donors.map(d=>`<div class="card"><strong>${d.name}</strong><br/>Ref: ${d.ref}<br/>Group: ${d.blood_group}<br/>City: ${d.city}<br/>Available: ${d.available?"Yes":"No"}</div>`).join('');
+      content.innerHTML = `<h2>Donor Registry</h2><div class="grid">${html}</div>`;
+    };
+    document.getElementById('btnStats').onclick = loadStats;
+    document.getElementById('btnRequests').onclick = loadRequests;
+    document.getElementById('btnDonors').onclick = loadDonors;
+    document.getElementById('toggleTheme').onclick = ()=>{ document.body.classList.toggle('dark-mode'); };
+    // Initial view
+    loadStats();
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Build artifacts
+blood_donor_finder.exe
+*.o
+*.obj
+*.exe
+
+# Node modules
+node_modules/
+
+# SQLite database files
+*.db
+
+# Environment files
+.env
+.env.local
+
+# IDE/editor folders
+.vscode/
+.idea/
+
+# OS generated files
+Thumbs.db
+Desktop.ini
