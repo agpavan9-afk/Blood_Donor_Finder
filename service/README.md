@@ -19,7 +19,7 @@ This service is a local development shell around the C matcher. It uses Node's b
    node service\server.mjs
    ```
 
-3. Open `http://127.0.0.1:8080`, choose a role, and enter that role's token.
+3. Open http://127.0.0.1:3000 to use the staff coordination workspace.
 
 The local service binds only to loopback, rejects other bind addresses, and keeps tokens in browser memory. Each token grants one demo role. `BDF_DONOR_REF` can select which synthetic profile the donor portal controls; it defaults to `900000001`. Seed profiles begin opted out and unavailable so the donor can explicitly exercise the opt-in flow. These tokens are development gates, not user identity or hospital access control. The database file is created under `data/` unless `BDF_DB_PATH` is set. Demo candidate rows are synthetic, and their consent/availability/ETA timestamps are refreshed only to exercise the local demo path.
 

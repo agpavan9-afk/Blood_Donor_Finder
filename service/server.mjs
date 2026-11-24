@@ -13,6 +13,8 @@ import { open } from "sqlite";
 import express from "express";
 import dotenv from "dotenv";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 // ---------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------
@@ -196,6 +198,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve the local staff interface from the same origin as the API.
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+
 // ---------------------------------------------------------------------
 // API endpoints
 // ---------------------------------------------------------------------
@@ -211,6 +216,15 @@ app.get("/api/stats", async (req, res) => {
 });
 
 // -------------------------------------------------
+// Hospital request queue
+app.get("/api/requests", async (req, res) => {
+  const rows = await (await getDb()).all(
+    "SELECT id, hospital_name, blood_group, units_needed, location_city, created_at, status " +
+    "FROM hospital_request ORDER BY created_at DESC, id DESC LIMIT 100"
+  );
+  res.json(rows);
+});
+
 // Donor list (public) – limited fields
 // -------------------------------------------------
 app.get("/api/donors", async (req, res) => {

@@ -1,62 +1,523 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Blood Donor Finder – Staff Dashboard</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17232d">
+  <title>Blood Donor Finder | Coordination workspace</title>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; color:#333; }
-    header { background:#c62828; color:#fff; padding:1rem; text-align:center; }
-    nav { background:#e0e0e0; padding:0.5rem; display:flex; gap:1rem; justify-content:center; }
-    nav button { background:#fff; border:1px solid #ccc; padding:0.5rem 1rem; cursor:pointer; }
-    main { padding:1rem; max-width:960px; margin:auto; }
-    .card { background:#fff; border-radius:4px; padding:1rem; margin-bottom:1rem; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:1rem; }
-    .toast { position:fixed; bottom:1rem; right:1rem; background:#323232; color:#fff; padding:0.75rem 1.25rem; border-radius:4px; opacity:0; transition:opacity 0.3s; }
-    .toast.show { opacity:1; }
-    .dark-mode { background:#212121; color:#e0e0e0; }
+    :root {
+      color-scheme: light;
+      --ink: #1c2933;
+      --muted: #6d7b86;
+      --line: #e2e8ec;
+      --paper: #ffffff;
+      --canvas: #f4f6f7;
+      --nav: #17232d;
+      --nav-muted: #a9b5be;
+      --red: #a8323d;
+      --red-dark: #862731;
+      --red-pale: #fbefef;
+      --green: #28684f;
+      --green-pale: #edf6f1;
+      --amber: #89611d;
+      --amber-pale: #fbf5e8;
+      --shadow: 0 1px 2px rgba(19, 34, 44, .04), 0 8px 24px rgba(19, 34, 44, .035);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; color: var(--ink); background: var(--canvas); font-size: 14px; line-height: 1.5; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #c98288; outline-offset: 2px; }
+    .skip-link { position: fixed; top: 8px; left: 8px; z-index: 20; padding: 10px 14px; transform: translateY(-150%); background: white; color: var(--ink); border-radius: 5px; }
+    .skip-link:focus { transform: translateY(0); }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+    .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 25px 16px 18px; color: white; background: var(--nav); }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 26px; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; flex: none; color: white; background: var(--red); border-radius: 8px; }
+    .brand-mark svg { width: 19px; height: 19px; }
+    .brand-name { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.02em; }
+    .brand-caption { margin: 1px 0 0; color: var(--nav-muted); font-size: 11px; letter-spacing: .025em; }
+    .nav-label { margin: 7px 10px 8px; color: #8796a2; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .nav-list { display: grid; gap: 4px; }
+    .nav-button { display: flex; width: 100%; align-items: center; gap: 12px; padding: 10px 11px; color: #ccd5db; text-align: left; background: transparent; border: 0; border-radius: 6px; font-size: 13px; }
+    .nav-button:hover { color: white; background: rgba(255,255,255,.07); }
+    .nav-button[aria-current="page"] { color: white; background: rgba(255,255,255,.11); box-shadow: inset 2px 0 #d56b72; }
+    .nav-button svg { width: 17px; height: 17px; color: #aab6be; flex: none; }
+    .nav-button[aria-current="page"] svg { color: #efb9bd; }
+    .side-bottom { margin-top: auto; }
+    .environment { padding: 13px; border: 1px solid rgba(255,255,255,.13); border-radius: 7px; }
+    .environment-title { display: flex; align-items: center; gap: 8px; color: white; font-size: 12px; font-weight: 600; }
+    .environment-title .dot { width: 7px; height: 7px; border-radius: 50%; background: #d7a451; }
+    .environment-copy { margin: 6px 0 0 15px; color: var(--nav-muted); font-size: 11px; line-height: 1.45; }
+    .side-footer { padding: 15px 10px 0; color: #8796a2; font-size: 10px; }
+    .workspace { min-width: 0; }
+    .topbar { height: 64px; display: flex; justify-content: space-between; align-items: center; padding: 0 clamp(22px, 4vw, 54px); background: var(--paper); border-bottom: 1px solid var(--line); }
+    .topbar-context { color: var(--muted); font-size: 12px; }
+    .topbar-right { display: flex; align-items: center; gap: 15px; }
+    .service-state { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+    .service-state .dot { width: 7px; height: 7px; border-radius: 50%; background: #aab5bc; }
+    .service-state[data-state="online"] .dot { background: #3e8a69; }
+    .service-state[data-state="offline"] .dot { background: var(--red); }
+    .top-divider { width: 1px; height: 24px; background: var(--line); }
+    .workspace-label { color: #44535e; font-size: 12px; font-weight: 600; }
+    main { width: min(100%, 1440px); margin: 0 auto; padding: 34px clamp(22px, 4vw, 54px) 54px; }
+    .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 26px; }
+    .eyebrow { margin: 0 0 6px; color: var(--muted); font-size: 11px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0; color: var(--ink); font-size: clamp(24px, 3vw, 30px); font-weight: 650; letter-spacing: -.035em; line-height: 1.2; }
+    .page-description { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+    .button { min-height: 38px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 0 13px; color: #fff; background: var(--red); border: 1px solid var(--red); border-radius: 5px; font-size: 12px; font-weight: 650; transition: background .15s ease, border-color .15s ease; }
+    .button:hover { background: var(--red-dark); border-color: var(--red-dark); }
+    .button svg { width: 15px; height: 15px; }
+    .button-secondary { color: #35444f; background: white; border-color: #cfd8de; }
+    .button-secondary:hover { color: var(--ink); background: #f7f9fa; border-color: #aebbc4; }
+    .button-quiet { min-height: 32px; color: var(--red-dark); background: transparent; border-color: transparent; }
+    .button-quiet:hover { background: var(--red-pale); border-color: transparent; }
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .metric, .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 7px; box-shadow: var(--shadow); }
+    .metric { min-height: 113px; padding: 17px 19px; }
+    .metric-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
+    .metric-icon { width: 29px; height: 29px; display: grid; place-items: center; color: #64737e; background: #f2f5f6; border-radius: 6px; }
+    .metric-icon svg { width: 15px; height: 15px; }
+    .metric-value { margin-top: 7px; font-size: 28px; font-weight: 650; letter-spacing: -.045em; line-height: 1.1; }
+    .metric-note { margin-top: 5px; color: #87939b; font-size: 11px; }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .9fr); gap: 18px; align-items: start; }
+    .panel { overflow: hidden; }
+    .panel-head { min-height: 63px; display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+    .panel-title { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: -.01em; }
+    .panel-subtitle { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+    .panel-body { padding: 18px; }
+    .link-button { padding: 4px 0; color: var(--red-dark); background: transparent; border: 0; font-size: 11px; font-weight: 650; }
+    .link-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .blood-list { display: grid; gap: 0; }
+    .blood-row { min-height: 43px; display: grid; grid-template-columns: 42px minmax(55px, 1fr) 32px 95px; align-items: center; gap: 12px; border-bottom: 1px solid #edf0f2; }
+    .blood-row:last-child { border-bottom: 0; }
+    .blood-type { color: #35434d; font-size: 12px; font-weight: 650; }
+    .bar-track { height: 5px; overflow: hidden; background: #edf0f2; border-radius: 9px; }
+    .bar-fill { height: 100%; min-width: 2px; background: #b24a53; border-radius: inherit; }
+    .blood-count { color: var(--ink); text-align: right; font-size: 12px; font-weight: 600; }
+    .blood-note { color: #87939b; text-align: right; font-size: 10px; }
+    .availability-summary { display: grid; gap: 12px; }
+    .availability-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+    .availability-line strong { color: var(--ink); font-size: 12px; font-weight: 650; }
+    .availability-track { height: 7px; margin-top: 5px; background: #edf0f2; border-radius: 99px; overflow: hidden; }
+    .availability-fill { height: 100%; background: #529171; border-radius: inherit; }
+    .note-box { margin-top: 20px; padding: 12px 13px; color: #53616b; background: #f5f7f8; border-left: 2px solid #bbc6cd; font-size: 11px; line-height: 1.55; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+    .field-control { height: 36px; min-width: 0; padding: 0 10px; color: var(--ink); background: white; border: 1px solid #d7dfe4; border-radius: 5px; font-size: 12px; }
+    .search-control { width: min(100%, 270px); padding-left: 34px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23717e87' stroke-width='1.7' viewBox='0 0 24 24'%3E%3Ccircle cx='10.8' cy='10.8' r='6.8'/%3E%3Cpath d='m16 16 4 4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 11px center; }
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 10px 16px; color: #74818b; background: #fafbfb; border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 650; letter-spacing: .055em; text-transform: uppercase; white-space: nowrap; }
+    td { padding: 12px 16px; color: #3c4a54; border-bottom: 1px solid #edf0f2; font-size: 12px; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fbfcfc; }
+    .person-cell { display: flex; align-items: center; gap: 10px; }
+    .person-initial { width: 29px; height: 29px; display: grid; flex: none; place-items: center; color: #596874; background: #eef2f4; border-radius: 50%; font-size: 10px; font-weight: 650; }
+    .person-name { color: var(--ink); font-weight: 600; }
+    .person-ref { margin-top: 1px; color: #8a969e; font-size: 10px; }
+    .group-chip { display: inline-flex; min-width: 37px; justify-content: center; padding: 3px 7px; color: #6f2930; background: var(--red-pale); border-radius: 4px; font-size: 11px; font-weight: 650; }
+    .status { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; }
+    .status::before { width: 6px; height: 6px; content: ""; border-radius: 50%; background: #a6afb5; }
+    .status.available { color: var(--green); }
+    .status.available::before { background: #4b9972; }
+    .status.unavailable { color: #77838b; }
+    .status.pending { color: var(--amber); }
+    .status.pending::before { background: #c2953d; }
+    .status.matched { color: var(--green); }
+    .status.matched::before { background: #4b9972; }
+    .status.cancelled { color: #7f4b4f; }
+    .status.cancelled::before { background: #aa666b; }
+    .table-empty, .loading, .error-state { padding: 30px 18px; color: var(--muted); text-align: center; font-size: 12px; }
+    .loading { min-height: 140px; display: grid; place-items: center; }
+    .error-state { color: #7d353b; background: #fcf5f5; text-align: left; }
+    .error-state strong { display: block; margin-bottom: 3px; color: #702830; font-size: 12px; }
+    .request-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(290px, .8fr); align-items: start; gap: 18px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-field { display: grid; gap: 6px; }
+    .form-field.full { grid-column: 1 / -1; }
+    .form-label { color: #3d4b55; font-size: 11px; font-weight: 600; }
+    .form-help { color: #87939b; font-size: 10px; }
+    .form-input { width: 100%; height: 39px; padding: 0 10px; color: var(--ink); background: white; border: 1px solid #d5dde2; border-radius: 5px; font-size: 12px; }
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+    .form-message { min-height: 18px; margin: 10px 0 0; color: var(--muted); font-size: 11px; }
+    .form-message.error { color: #8c3038; }
+    .form-message.success { color: var(--green); }
+    .request-meta { display: grid; gap: 13px; }
+    .meta-row { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 11px; border-bottom: 1px solid #edf0f2; color: var(--muted); font-size: 11px; }
+    .meta-row:last-child { padding-bottom: 0; border-bottom: 0; }
+    .meta-row strong { color: var(--ink); text-align: right; font-weight: 600; }
+    .subtle-alert { padding: 12px; color: #655a45; background: var(--amber-pale); border-radius: 5px; font-size: 11px; line-height: 1.5; }
+    .hospital-list { display: grid; gap: 0; }
+    .hospital-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #edf0f2; }
+    .hospital-row:last-child { border-bottom: 0; }
+    .hospital-icon { width: 30px; height: 30px; display: grid; flex: none; place-items: center; color: #53636e; background: #f0f3f5; border-radius: 6px; }
+    .hospital-icon svg { width: 16px; height: 16px; }
+    .hospital-name { color: var(--ink); font-size: 12px; font-weight: 600; }
+    .hospital-location { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+    .toast { position: fixed; right: 22px; bottom: 22px; z-index: 10; max-width: min(420px, calc(100vw - 44px)); padding: 11px 15px; color: white; background: #26343e; border-radius: 5px; box-shadow: 0 8px 26px rgba(0,0,0,.16); font-size: 12px; opacity: 0; transform: translateY(5px); pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 208px minmax(0,1fr); }
+      .sidebar { padding-right: 12px; padding-left: 12px; }
+      .content-grid, .request-layout { grid-template-columns: minmax(0,1fr); }
+    }
+    @media (max-width: 680px) {
+      .app { display: block; }
+      .sidebar { position: static; height: auto; padding: 13px 14px 10px; }
+      .brand { padding: 0 3px 12px; }
+      .nav-label, .side-bottom { display: none; }
+      .nav-list { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 2px; scrollbar-width: thin; }
+      .nav-button { width: auto; min-width: max-content; padding: 9px 10px; }
+      .nav-button[aria-current="page"] { box-shadow: inset 0 -2px #d56b72; }
+      .topbar { height: 49px; padding: 0 18px; }
+      .topbar-context { font-size: 11px; }
+      .workspace-label { display: none; }
+      main { padding: 25px 16px 38px; }
+      .page-heading { align-items: flex-start; flex-direction: column; margin-bottom: 20px; }
+      .page-heading .button { align-self: stretch; }
+      .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+      .metric { min-height: 100px; padding: 13px; }
+      .metric-value { font-size: 25px; }
+      .metric-label { font-size: 11px; }
+      .metric:last-child { grid-column: 1 / -1; min-height: 86px; }
+      .panel-head { padding: 13px 14px; }
+      .panel-body { padding: 14px; }
+      .toolbar { padding: 12px 14px; }
+      .search-control { width: 100%; }
+      .field-control { flex: 1; }
+      th, td { padding-right: 12px; padding-left: 12px; }
+      .form-grid { grid-template-columns: minmax(0,1fr); }
+      .form-field.full { grid-column: auto; }
+      .blood-row { grid-template-columns: 37px minmax(40px,1fr) 26px 75px; gap: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    }
+    @media (forced-colors: active) {
+      .button, .group-chip, .metric, .panel { border: 1px solid CanvasText; }
+      .nav-button[aria-current="page"] { outline: 1px solid Highlight; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Blood Donor Finder – Staff Dashboard</h1>
-  </header>
-  <nav>
-    <button id="btnStats">Stats</button>
-    <button id="btnRequests">Requests</button>
-    <button id="btnDonors">Donors</button>
-    <button id="toggleTheme">Toggle Dark</button>
-  </nav>
-  <main id="content">
-    <p>Loading...</p>
-  </main>
-  <div id="toast" class="toast"></div>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <div class="app">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c2.7 3.6 6.4 7.7 6.4 11.3a6.4 6.4 0 1 1-12.8 0C5.6 11.2 9.3 7.1 12 3.5Z"/><path d="M9.2 15.2a3 3 0 0 0 3 3"/></svg>
+        </div>
+        <div>
+          <p class="brand-name">Blood Donor Finder</p>
+          <p class="brand-caption">Coordination workspace</p>
+        </div>
+      </div>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav-list" aria-label="Workspace sections">
+        <button class="nav-button" type="button" data-view="overview" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg>Overview
+        </button>
+        <button class="nav-button" type="button" data-view="requests">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l4 4v13H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path d="M14 3.5v5h5M9 13h6M9 16.5h6"/></svg>Requests
+        </button>
+        <button class="nav-button" type="button" data-view="donors">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.3a3.2 3.2 0 0 1 0 6.2M17 14.2a5 5 0 0 1 3.5 4.8"/></svg>Donor registry
+        </button>
+        <button class="nav-button" type="button" data-view="donor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5 20a7 7 0 0 1 14 0M19 5v5M16.5 7.5h5"/></svg>Donor availability
+        </button>
+        <button class="nav-button" type="button" data-view="hospitals">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5h16M6.5 20.5V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14.5M10 8h4M12 6v4M9.5 14h1M13.5 14h1M9.5 17h1M13.5 17h1"/></svg>Hospitals
+        </button>
+      </nav>
+      <div class="side-bottom">
+        <div class="environment">
+          <div class="environment-title"><span class="dot" aria-hidden="true"></span>Demo environment</div>
+          <p class="environment-copy">Synthetic records for local evaluation. Not for clinical use.</p>
+        </div>
+        <div class="side-footer">Bengaluru, Karnataka · India</div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-context">Bengaluru / <span id="context-label">Overview</span></div>
+        <div class="topbar-right">
+          <span class="service-state" id="service-state" data-state="checking"><span class="dot" aria-hidden="true"></span><span id="service-label">Checking service</span></span>
+          <span class="top-divider" aria-hidden="true"></span>
+          <span class="workspace-label">Pilot workspace</span>
+        </div>
+      </header>
+      <main id="main" tabindex="-1">
+        <div id="content" aria-live="polite"><div class="loading">Loading workspace…</div></div>
+      </main>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
-    const API = "http://localhost:3000/api";
+    const API = new URLSearchParams(window.location.search).get('api') || 'http://localhost:3000/api';
     const content = document.getElementById('content');
     const toast = document.getElementById('toast');
-    const showToast = (msg)=>{ toast.textContent=msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),3000); };
-    const loadStats = async()=>{
-      const res = await fetch(`${API}/stats`); const data = await res.json();
-      content.innerHTML = `<h2>Recent Stats</h2><pre>${JSON.stringify(data,null,2)}</pre>`;
+    const serviceState = document.getElementById('service-state');
+    const serviceLabel = document.getElementById('service-label');
+    const pageLabels = { overview: 'Overview', requests: 'Requests', donors: 'Donor registry', donor: 'Donor availability', hospitals: 'Hospitals' };
+    const state = { view: 'overview', donors: [], hospitals: [], requests: [], search: '', group: 'all', availability: 'all', requestStatus: 'all', selectedDonorRef: '' };
+    let toastTimer;
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value).replace(/[&<>'"]/g, function (char) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char];
+      });
+    }
+    function initials(name) {
+      return String(name || '?').trim().split(/\s+/).slice(0, 2).map(function (part) { return part.charAt(0); }).join('').toUpperCase();
+    }
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 3200);
+    }
+    async function api(path, options) {
+      const response = await fetch(API + path, options || {});
+      const type = response.headers.get('content-type') || '';
+      const data = type.includes('application/json') ? await response.json() : null;
+      if (!response.ok) throw new Error(data && data.error ? data.error : 'The service returned an error (' + response.status + ').');
+      return data;
+    }
+    function setService(online) {
+      serviceState.dataset.state = online ? 'online' : 'offline';
+      serviceLabel.textContent = online ? 'Service connected' : 'Service unavailable';
+    }
+    async function loadSharedData() {
+      const results = await Promise.allSettled([
+        api('/donors'),
+        api('/hospitals'),
+        api('/requests'),
+        api('/health')
+      ]);
+      if (results[0].status === 'fulfilled') state.donors = Array.isArray(results[0].value) ? results[0].value : [];
+      if (results[1].status === 'fulfilled') state.hospitals = Array.isArray(results[1].value) ? results[1].value : [];
+      if (results[2].status === 'fulfilled') state.requests = Array.isArray(results[2].value) ? results[2].value : [];
+      setService(results.some(function (result) { return result.status === 'fulfilled'; }));
+      render();
+    }
+    function heading(eyebrow, title, description, action) {
+      return '<div class="page-heading"><div><p class="eyebrow">' + eyebrow + '</p><h1>' + title + '</h1><p class="page-description">' + description + '</p></div>' + (action || '') + '</div>';
+    }
+    function sectionButton(label, view) {
+      return '<button class="link-button" type="button" data-go="' + view + '">' + label + '</button>';
+    }
+    function metric(label, value, note, icon) {
+      return '<section class="metric"><div class="metric-label"><span>' + label + '</span><span class="metric-icon" aria-hidden="true">' + icon + '</span></div><div class="metric-value">' + value + '</div><div class="metric-note">' + note + '</div></section>';
+    }
+    const icons = {
+      people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.3a3.2 3.2 0 0 1 0 6.2"/></svg>',
+      available: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c2.7 3.6 6.4 7.7 6.4 11.3a6.4 6.4 0 1 1-12.8 0C5.6 11.2 9.3 7.1 12 3.5Z"/><path d="m9 14.8 2 2 4-4"/></svg>',
+      hospital: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5h16M6.5 20.5V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14.5M10 8h4M12 6v4M9.5 15h1M13.5 15h1"/></svg>'
     };
-    const loadRequests = async()=>{
-      const res = await fetch(`${API}/requests`); // placeholder – endpoint not yet implemented
-      const data = await res.json().catch(()=>[]);
-      content.innerHTML = `<h2>Hospital Requests (demo)</h2><pre>${JSON.stringify(data,null,2)}</pre>`;
-    };
-    const loadDonors = async()=>{
-      const res = await fetch(`${API}/donors`);
-      const donors = await res.json();
-      const html = donors.map(d=>`<div class="card"><strong>${d.name}</strong><br/>Ref: ${d.ref}<br/>Group: ${d.blood_group}<br/>City: ${d.city}<br/>Available: ${d.available?"Yes":"No"}</div>`).join('');
-      content.innerHTML = `<h2>Donor Registry</h2><div class="grid">${html}</div>`;
-    };
-    document.getElementById('btnStats').onclick = loadStats;
-    document.getElementById('btnRequests').onclick = loadRequests;
-    document.getElementById('btnDonors').onclick = loadDonors;
-    document.getElementById('toggleTheme').onclick = ()=>{ document.body.classList.toggle('dark-mode'); };
-    // Initial view
-    loadStats();
+    function renderOverview() {
+      const available = state.donors.filter(function (donor) { return Number(donor.available) === 1; }).length;
+      const notAvailable = Math.max(0, state.donors.length - available);
+      const byGroup = ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'].map(function (group) {
+        return { group: group, total: state.donors.filter(function (donor) { return donor.blood_group === group; }).length };
+      });
+      const max = Math.max(1, ...byGroup.map(function (item) { return item.total; }));
+      const recent = state.donors.filter(function (donor) { return Number(donor.available) === 1; }).slice(0, 5);
+      const recentRows = recent.length ? recent.map(function (donor) {
+        return '<tr><td><div class="person-cell"><span class="person-initial" aria-hidden="true">' + escapeHtml(initials(donor.name)) + '</span><div><div class="person-name">' + escapeHtml(donor.name) + '</div><div class="person-ref">Ref ' + escapeHtml(donor.ref) + '</div></div></div></td><td><span class="group-chip">' + escapeHtml(donor.blood_group) + '</span></td><td>' + escapeHtml(donor.city) + '</td><td><span class="status available">Available</span></td></tr>';
+      }).join('') : '<tr><td colspan="4" class="table-empty">No donors are currently marked available.</td></tr>';
+      const bloodRows = byGroup.map(function (item) {
+        return '<div class="blood-row"><span class="blood-type">' + item.group + '</span><div class="bar-track" aria-hidden="true"><div class="bar-fill" style="width:' + Math.round(item.total / max * 100) + '%"></div></div><span class="blood-count">' + item.total + '</span><span class="blood-note">registered</span></div>';
+      }).join('');
+      const pct = state.donors.length ? Math.round(available / state.donors.length * 100) : 0;
+      return heading('Hospital coordination', 'Overview', 'A current view of the donor records and request activity in this local pilot.', '<button class="button" type="button" data-go="requests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New request</button>') +
+        '<div class="metrics">' +
+          metric('Registered donors', state.donors.length, 'Records in the local directory', icons.people) +
+          metric('Marked available', available, 'Donor availability flag is on', icons.available) +
+          metric('Hospital locations', state.hospitals.length, 'Locations configured in this pilot', icons.hospital) +
+        '</div>' +
+        '<div class="content-grid">' +
+          '<section class="panel"><div class="panel-head"><div><h2 class="panel-title">Available donor records</h2><p class="panel-subtitle">Sample of donors marked available in the local directory</p></div>' + sectionButton('Open registry', 'donors') + '</div><div class="table-wrap"><table><caption class="visually-hidden">Available donor records</caption><thead><tr><th scope="col">Donor</th><th scope="col">Blood group</th><th scope="col">City</th><th scope="col">Availability</th></tr></thead><tbody>' + recentRows + '</tbody></table></div></section>' +
+          '<div><section class="panel"><div class="panel-head"><div><h2 class="panel-title">Directory by blood group</h2><p class="panel-subtitle">Registered records by ABO/Rh group</p></div></div><div class="panel-body"><div class="blood-list">' + bloodRows + '</div><div class="note-box">These counts describe directory records only. The pilot does not confirm donor eligibility or blood availability.</div></div></section>' +
+          '<section class="panel" style="margin-top:18px"><div class="panel-head"><div><h2 class="panel-title">Availability overview</h2><p class="panel-subtitle">Based on each record’s current availability flag</p></div></div><div class="panel-body"><div class="availability-summary"><div><div class="availability-line"><span>Marked available</span><strong>' + available + '</strong></div><div class="availability-track" aria-label="' + pct + '% marked available"><div class="availability-fill" style="width:' + pct + '%"></div></div></div><div class="availability-line"><span>Not marked available</span><strong>' + notAvailable + '</strong></div></div></div></section></div>' +
+        '</div>';
+    }
+    function statusTag(status) {
+      const value = String(status || 'pending').toLowerCase();
+      const safe = ['pending', 'matched', 'cancelled'].includes(value) ? value : 'pending';
+      const label = safe.charAt(0).toUpperCase() + safe.slice(1);
+      return '<span class="status ' + safe + '">' + label + '</span>';
+    }
+    function renderRequests() {
+      const rows = state.requests.filter(function (request) {
+        return state.requestStatus === 'all' || request.status === state.requestStatus;
+      }).map(function (request) {
+        const date = request.created_at ? new Date(request.created_at.replace(' ', 'T') + (request.created_at.endsWith('Z') ? '' : 'Z')).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+        return '<tr><td>#' + escapeHtml(request.id) + '</td><td>' + escapeHtml(request.hospital_name) + '</td><td><span class="group-chip">' + escapeHtml(request.blood_group) + '</span></td><td>' + escapeHtml(request.units_needed) + '</td><td>' + statusTag(request.status) + '</td><td>' + escapeHtml(date) + '</td></tr>';
+      }).join('') || '<tr><td colspan="6" class="table-empty">No requests to show. Create a request to begin.</td></tr>';
+      const hospitalOptions = state.hospitals.map(function (hospital) {
+        return '<option value="' + escapeHtml(hospital.id) + '">' + escapeHtml(hospital.name) + ' · ' + escapeHtml(hospital.city) + '</option>';
+      }).join('');
+      return heading('Request management', 'Hospital requests', 'Record a blood request and review its current status.', '') +
+        '<div class="request-layout"><section class="panel"><div class="panel-head"><div><h2 class="panel-title">Request queue</h2><p class="panel-subtitle">Requests recorded in this pilot service</p></div><label class="visually-hidden" for="request-filter">Filter requests by status</label><select class="field-control" id="request-filter"><option value="all">All statuses</option><option value="pending">Pending</option><option value="matched">Matched</option><option value="cancelled">Cancelled</option></select></div><div class="table-wrap"><table><caption class="visually-hidden">Hospital request queue</caption><thead><tr><th scope="col">Reference</th><th scope="col">Hospital</th><th scope="col">Blood group</th><th scope="col">Units</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>' +
+        '<section class="panel"><div class="panel-head"><div><h2 class="panel-title">Create request</h2><p class="panel-subtitle">Add a request to the local queue</p></div></div><div class="panel-body"><form id="request-form"><div class="form-grid"><div class="form-field full"><label class="form-label" for="hospital">Hospital location</label><select class="form-input" id="hospital" name="hospital" required><option value="">Select a location</option>' + hospitalOptions + '</select></div><div class="form-field"><label class="form-label" for="blood-group">Blood group</label><select class="form-input" id="blood-group" name="blood_group" required><option value="">Select group</option><option>O-</option><option>O+</option><option>A-</option><option>A+</option><option>B-</option><option>B+</option><option>AB-</option><option>AB+</option></select></div><div class="form-field"><label class="form-label" for="units">Units requested</label><input class="form-input" id="units" name="units_needed" type="number" min="1" max="100" step="1" inputmode="numeric" required></div></div><div class="form-actions"><button class="button" type="submit">Save request</button></div><p class="form-message" id="request-message" role="status" aria-live="polite"></p></form></div></section></div>';
+    }
+    function renderDonors() {
+      const groups = Array.from(new Set(state.donors.map(function (donor) { return donor.blood_group; }).filter(Boolean))).sort();
+      const filtered = state.donors.filter(function (donor) {
+        const search = state.search.toLowerCase();
+        const matchesSearch = !search || [donor.name, donor.ref, donor.city, donor.blood_group].some(function (value) { return String(value || '').toLowerCase().includes(search); });
+        const matchesGroup = state.group === 'all' || donor.blood_group === state.group;
+        const matchesAvailability = state.availability === 'all' || (Number(donor.available) === 1) === (state.availability === 'available');
+        return matchesSearch && matchesGroup && matchesAvailability;
+      });
+      const rows = filtered.map(function (donor) {
+        const isAvailable = Number(donor.available) === 1;
+        return '<tr><td><div class="person-cell"><span class="person-initial" aria-hidden="true">' + escapeHtml(initials(donor.name)) + '</span><div><div class="person-name">' + escapeHtml(donor.name) + '</div><div class="person-ref">Ref ' + escapeHtml(donor.ref) + '</div></div></div></td><td><span class="group-chip">' + escapeHtml(donor.blood_group) + '</span></td><td>' + escapeHtml(donor.city) + '</td><td><span class="status ' + (isAvailable ? 'available' : 'unavailable') + '">' + (isAvailable ? 'Available' : 'Unavailable') + '</span></td></tr>';
+      }).join('') || '<tr><td colspan="4" class="table-empty">No donor records match these filters.</td></tr>';
+      return heading('Directory', 'Donor registry', 'Review the synthetic donor records configured for this local pilot.', '') +
+        '<section class="panel"><div class="toolbar"><label class="visually-hidden" for="donor-search">Search donor records</label><input class="field-control search-control" id="donor-search" type="search" placeholder="Search name, reference or city" value="' + escapeHtml(state.search) + '"><label class="visually-hidden" for="group-filter">Filter by blood group</label><select class="field-control" id="group-filter"><option value="all">All blood groups</option>' + groups.map(function (group) { return '<option value="' + escapeHtml(group) + '"' + (state.group === group ? ' selected' : '') + '>' + escapeHtml(group) + '</option>'; }).join('') + '</select><label class="visually-hidden" for="availability-filter">Filter by availability</label><select class="field-control" id="availability-filter"><option value="all">All availability</option><option value="available"' + (state.availability === 'available' ? ' selected' : '') + '>Available</option><option value="unavailable"' + (state.availability === 'unavailable' ? ' selected' : '') + '>Unavailable</option></select><span class="form-help">' + filtered.length + ' records</span></div><div class="table-wrap"><table><caption class="visually-hidden">Donor registry</caption><thead><tr><th scope="col">Donor</th><th scope="col">Blood group</th><th scope="col">City</th><th scope="col">Availability</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>' +
+        '<p class="form-help" style="margin-top:12px">Directory values are synthetic sample records. Availability flags do not confirm donation eligibility.</p>';
+    }
+    function renderHospitals() {
+      const rows = state.hospitals.map(function (hospital) {
+        return '<div class="hospital-row"><span class="hospital-icon" aria-hidden="true">' + icons.hospital + '</span><div><div class="hospital-name">' + escapeHtml(hospital.name) + '</div><div class="hospital-location">' + escapeHtml(hospital.city) + '</div></div></div>';
+      }).join('') || '<div class="table-empty">No hospital locations are configured.</div>';
+      return heading('Network directory', 'Hospital locations', 'Locations currently configured for request entry in this pilot.', '') +
+        '<section class="panel"><div class="panel-head"><div><h2 class="panel-title">Configured locations</h2><p class="panel-subtitle">These locations provide the request destination coordinates.</p></div><span class="form-help">' + state.hospitals.length + ' locations</span></div><div class="hospital-list">' + rows + '</div></section>' +
+        '<div class="subtle-alert" style="margin-top:16px">This list is a local configuration sample. Confirm facility details before any operational use.</div>';
+    }
+    function renderDonorPortal() {
+      const profiles = state.donors.map(function (donor) {
+        return '<option value="' + escapeHtml(donor.ref) + '"' + (state.selectedDonorRef === donor.ref ? ' selected' : '') + '>' + escapeHtml(donor.ref) + ' · ' + escapeHtml(donor.name) + '</option>';
+      }).join('');
+      const donor = state.donors.find(function (item) { return item.ref === state.selectedDonorRef; });
+      const profilePanel = donor
+        ? '<section class="panel"><div class="panel-head"><div><h2 class="panel-title">Availability setting</h2><p class="panel-subtitle">Sample profile ' + escapeHtml(donor.ref) + '</p></div><span class="status ' + (Number(donor.available) === 1 ? 'available' : 'unavailable') + '">' + (Number(donor.available) === 1 ? 'Available' : 'Unavailable') + '</span></div><div class="panel-body"><div class="request-meta"><div class="meta-row"><span>Name</span><strong>' + escapeHtml(donor.name) + '</strong></div><div class="meta-row"><span>Blood group</span><strong><span class="group-chip">' + escapeHtml(donor.blood_group) + '</span></strong></div><div class="meta-row"><span>City</span><strong>' + escapeHtml(donor.city) + '</strong></div><div class="meta-row"><span>Current setting</span><strong>' + (Number(donor.available) === 1 ? 'Marked available' : 'Not marked available') + '</strong></div></div><div class="form-actions"><button class="button ' + (Number(donor.available) === 1 ? 'button-secondary' : '') + '" type="button" id="toggle-donor-availability" data-ref="' + escapeHtml(donor.ref) + '" data-next="' + (Number(donor.available) === 1 ? '0' : '1') + '">' + (Number(donor.available) === 1 ? 'Mark unavailable' : 'Mark available') + '</button></div></div></section>'
+        : '<section class="panel"><div class="panel-body"><div class="table-empty">Choose a sample profile to view its availability setting.</div></div></section>';
+      return heading('Donor self-service', 'Availability', 'Update the availability flag for a synthetic donor record.', '') +
+        '<div class="request-layout"><section class="panel"><div class="panel-head"><div><h2 class="panel-title">Select sample profile</h2><p class="panel-subtitle">Use a synthetic record to preview the donor view</p></div></div><div class="panel-body"><div class="form-field"><label class="form-label" for="donor-profile">Demo donor profile</label><select class="form-input" id="donor-profile"><option value="">Select a sample profile</option>' + profiles + '</select></div><p class="form-message">This demo selector is not a login or identity check.</p></div></section>' +
+        profilePanel +
+        '<div class="subtle-alert" style="grid-column:1 / -1">Demo only: changes affect a synthetic local record and do not notify a hospital. Availability does not confirm eligibility to donate. Do not enter real donor or patient information.</div></div>';
+    }
+    function render() {
+      document.querySelectorAll('.nav-button').forEach(function (button) {
+        if (button.dataset.view === state.view) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      });
+      document.getElementById('context-label').textContent = pageLabels[state.view];
+      if (state.view === 'overview') content.innerHTML = renderOverview();
+      if (state.view === 'requests') content.innerHTML = renderRequests();
+      if (state.view === 'donors') content.innerHTML = renderDonors();
+      if (state.view === 'donor') content.innerHTML = renderDonorPortal();
+      if (state.view === 'hospitals') content.innerHTML = renderHospitals();
+      bindViewEvents();
+    }
+    function goTo(view) {
+      if (!pageLabels[view]) return;
+      state.view = view;
+      if (view === 'requests' || view === 'overview') refreshRequests();
+      render();
+      document.getElementById('main').focus({ preventScroll: true });
+    }
+    async function refreshRequests() {
+      try {
+        const requests = await api('/requests');
+        state.requests = Array.isArray(requests) ? requests : [];
+        if (state.view === 'requests' || state.view === 'overview') render();
+      } catch (error) {
+        if (state.view === 'requests') showToast('Could not refresh requests: ' + error.message);
+      }
+    }
+    function bindViewEvents() {
+      document.querySelectorAll('[data-go]').forEach(function (button) {
+        button.addEventListener('click', function () { goTo(button.dataset.go); });
+      });
+      const search = document.getElementById('donor-search');
+      if (search) search.addEventListener('input', function () { state.search = search.value; const start = search.selectionStart; render(); const next = document.getElementById('donor-search'); next.focus(); next.setSelectionRange(start, start); });
+      const groupFilter = document.getElementById('group-filter');
+      if (groupFilter) groupFilter.addEventListener('change', function () { state.group = groupFilter.value; render(); });
+      const availabilityFilter = document.getElementById('availability-filter');
+      if (availabilityFilter) availabilityFilter.addEventListener('change', function () { state.availability = availabilityFilter.value; render(); });
+      const requestFilter = document.getElementById('request-filter');
+      if (requestFilter) {
+        requestFilter.value = state.requestStatus;
+        requestFilter.addEventListener('change', function () { state.requestStatus = requestFilter.value; render(); });
+      }
+      const form = document.getElementById('request-form');
+      if (form) form.addEventListener('submit', submitRequest);
+      const donorProfile = document.getElementById('donor-profile');
+      if (donorProfile) donorProfile.addEventListener('change', function () { state.selectedDonorRef = donorProfile.value; render(); });
+      const availabilityButton = document.getElementById('toggle-donor-availability');
+      if (availabilityButton) availabilityButton.addEventListener('click', updateDonorAvailability);
+    }
+    async function updateDonorAvailability(event) {
+      const button = event.currentTarget;
+      const ref = button.dataset.ref;
+      const nextAvailability = Number(button.dataset.next);
+      button.disabled = true;
+      try {
+        await api('/donors/' + encodeURIComponent(ref) + '/availability', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ available: nextAvailability })
+        });
+        const donor = state.donors.find(function (item) { return item.ref === ref; });
+        if (donor) donor.available = nextAvailability;
+        render();
+        showToast('Sample availability updated.');
+      } catch (error) {
+        button.disabled = false;
+        showToast('Could not update availability: ' + error.message);
+      }
+    }
+    async function submitRequest(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const message = document.getElementById('request-message');
+      const submit = form.querySelector('button[type="submit"]');
+      const hospital = state.hospitals.find(function (item) { return String(item.id) === form.elements.hospital.value; });
+      if (!hospital) {
+        message.textContent = 'Select a configured hospital location.';
+        message.className = 'form-message error';
+        return;
+      }
+      const body = {
+        hospital_name: hospital.name,
+        blood_group: form.elements.blood_group.value,
+        units_needed: Number(form.elements.units_needed.value),
+        location_city: hospital.city,
+        latitude: Number(hospital.latitude),
+        longitude: Number(hospital.longitude)
+      };
+      submit.disabled = true;
+      submit.textContent = 'Saving…';
+      message.textContent = '';
+      message.className = 'form-message';
+      try {
+        const result = await api('/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        message.textContent = 'Request #' + result.requestId + ' saved to the local queue.';
+        message.className = 'form-message success';
+        form.reset();
+        await refreshRequests();
+        showToast('Request saved.');
+      } catch (error) {
+        message.textContent = error.message;
+        message.className = 'form-message error';
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Save request';
+      }
+    }
+    document.querySelectorAll('.nav-button').forEach(function (button) {
+      button.addEventListener('click', function () { goTo(button.dataset.view); });
+    });
+    loadSharedData();
   </script>
 </body>
 </html>
