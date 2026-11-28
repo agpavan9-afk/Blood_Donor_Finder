@@ -5,14 +5,18 @@
   "main": "service/server.mjs",
   "type": "module",
   "scripts": {
-    "start": "node service/server.mjs"
+    "build:c": "node scripts/build-c.mjs",
+    "check": "node --check service/server.mjs && node --check scripts/build-c.mjs && node --check scripts/test.mjs",
+    "start": "node service/server.mjs",
+    "test": "npm run build:c && node scripts/test.mjs"
   },
-  "author": "Your Name",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.17.0"
+  },
   "dependencies": {
     "express": "^4.19.2",
-    "dotenv": "^16.4.5",
     "sqlite": "^5.0.2",
-    "sqlite3": "^5.1.6"
+    "sqlite3": "^6.0.1"
   }
 }

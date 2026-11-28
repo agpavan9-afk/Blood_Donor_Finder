@@ -71,6 +71,7 @@
     .page-description { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
     .button { min-height: 38px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 0 13px; color: #fff; background: var(--red); border: 1px solid var(--red); border-radius: 5px; font-size: 12px; font-weight: 650; transition: background .15s ease, border-color .15s ease; }
     .button:hover { background: var(--red-dark); border-color: var(--red-dark); }
+    .button:disabled { cursor: wait; opacity: .62; }
     .button svg { width: 15px; height: 15px; }
     .button-secondary { color: #35444f; background: white; border-color: #cfd8de; }
     .button-secondary:hover { color: var(--ink); background: #f7f9fa; border-color: #aebbc4; }
@@ -151,6 +152,13 @@
     .meta-row:last-child { padding-bottom: 0; border-bottom: 0; }
     .meta-row strong { color: var(--ink); text-align: right; font-weight: 600; }
     .subtle-alert { padding: 12px; color: #655a45; background: var(--amber-pale); border-radius: 5px; font-size: 11px; line-height: 1.5; }
+    .match-panel { padding: 16px 18px 18px; background: #fbfcfc; border-top: 1px solid var(--line); }
+    .match-panel h3 { margin: 0 0 4px; font-size: 12px; }
+    .match-panel p { margin: 0; color: var(--muted); font-size: 11px; }
+    .match-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
+    .match-card { padding: 11px; background: white; border: 1px solid var(--line); border-radius: 5px; }
+    .match-card strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 12px; }
+    .match-card span { display: block; color: var(--muted); font-size: 10px; }
     .hospital-list { display: grid; gap: 0; }
     .hospital-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #edf0f2; }
     .hospital-row:last-child { border-bottom: 0; }
@@ -259,13 +267,14 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
-    const API = new URLSearchParams(window.location.search).get('api') || 'http://localhost:3000/api';
+    const configuredApi = new URLSearchParams(window.location.search).get('api');
+    const API = configuredApi || (window.location.protocol === 'file:' ? 'http://127.0.0.1:3000/api' : '/api');
     const content = document.getElementById('content');
     const toast = document.getElementById('toast');
     const serviceState = document.getElementById('service-state');
     const serviceLabel = document.getElementById('service-label');
     const pageLabels = { overview: 'Overview', requests: 'Requests', donors: 'Donor registry', donor: 'Donor availability', hospitals: 'Hospitals' };
-    const state = { view: 'overview', donors: [], hospitals: [], requests: [], search: '', group: 'all', availability: 'all', requestStatus: 'all', selectedDonorRef: '' };
+    const state = { view: 'overview', donors: [], hospitals: [], requests: [], search: '', group: 'all', availability: 'all', requestStatus: 'all', selectedDonorRef: '', matchResult: null, matchingRequestId: null };
     let toastTimer;
 
     function escapeHtml(value) {
@@ -353,18 +362,32 @@
       const label = safe.charAt(0).toUpperCase() + safe.slice(1);
       return '<span class="status ' + safe + '">' + label + '</span>';
     }
+    function renderMatchResult() {
+      const result = state.matchResult;
+      if (!result) return '';
+      if (result.error) {
+        return '<div class="match-panel" role="alert"><h3>Matching could not be completed</h3><p>' + escapeHtml(result.error) + '</p></div>';
+      }
+      const matches = Array.isArray(result.matches) ? result.matches : [];
+      const cards = matches.map(function (match, index) {
+        return '<div class="match-card"><strong>' + (index + 1) + '. Candidate ' + escapeHtml(match.donorRef) + '</strong><span>' + escapeHtml(Number(match.distanceKm).toFixed(1)) + ' km · ' + escapeHtml(Number(match.etaMinutes).toFixed(0)) + ' min</span><span>Ranking score ' + escapeHtml(Number(match.score).toFixed(1)) + '</span></div>';
+      }).join('');
+      return '<div class="match-panel" aria-live="polite"><h3>Ranked candidates for request #' + escapeHtml(result.requestId) + '</h3><p>' + (matches.length ? matches.length + ' preliminary candidate' + (matches.length === 1 ? '' : 's') + ' returned by the C matching engine.' : 'No eligible candidate is currently available within the configured limits.') + '</p>' + (cards ? '<div class="match-list">' + cards + '</div>' : '') + '<div class="subtle-alert" style="margin-top:12px">' + escapeHtml(result.notice || 'Clinical eligibility and crossmatch are still required.') + '</div></div>';
+    }
     function renderRequests() {
       const rows = state.requests.filter(function (request) {
         return state.requestStatus === 'all' || request.status === state.requestStatus;
       }).map(function (request) {
         const date = request.created_at ? new Date(request.created_at.replace(' ', 'T') + (request.created_at.endsWith('Z') ? '' : 'Z')).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
-        return '<tr><td>#' + escapeHtml(request.id) + '</td><td>' + escapeHtml(request.hospital_name) + '</td><td><span class="group-chip">' + escapeHtml(request.blood_group) + '</span></td><td>' + escapeHtml(request.units_needed) + '</td><td>' + statusTag(request.status) + '</td><td>' + escapeHtml(date) + '</td></tr>';
-      }).join('') || '<tr><td colspan="6" class="table-empty">No requests to show. Create a request to begin.</td></tr>';
+        const matching = Number(state.matchingRequestId) === Number(request.id);
+        const action = request.status === 'cancelled' ? '—' : '<button class="button button-quiet" type="button" data-match-request="' + escapeHtml(request.id) + '"' + (matching ? ' disabled' : '') + '>' + (matching ? 'Matching…' : (request.status === 'matched' ? 'Review matches' : 'Find matches')) + '</button>';
+        return '<tr><td>#' + escapeHtml(request.id) + '</td><td>' + escapeHtml(request.hospital_name) + '</td><td><span class="group-chip">' + escapeHtml(request.blood_group) + '</span></td><td>' + escapeHtml(request.units_needed) + '</td><td>' + statusTag(request.status) + '</td><td>' + escapeHtml(date) + '</td><td>' + action + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" class="table-empty">No requests to show. Create a request to begin.</td></tr>';
       const hospitalOptions = state.hospitals.map(function (hospital) {
         return '<option value="' + escapeHtml(hospital.id) + '">' + escapeHtml(hospital.name) + ' · ' + escapeHtml(hospital.city) + '</option>';
       }).join('');
       return heading('Request management', 'Hospital requests', 'Record a blood request and review its current status.', '') +
-        '<div class="request-layout"><section class="panel"><div class="panel-head"><div><h2 class="panel-title">Request queue</h2><p class="panel-subtitle">Requests recorded in this pilot service</p></div><label class="visually-hidden" for="request-filter">Filter requests by status</label><select class="field-control" id="request-filter"><option value="all">All statuses</option><option value="pending">Pending</option><option value="matched">Matched</option><option value="cancelled">Cancelled</option></select></div><div class="table-wrap"><table><caption class="visually-hidden">Hospital request queue</caption><thead><tr><th scope="col">Reference</th><th scope="col">Hospital</th><th scope="col">Blood group</th><th scope="col">Units</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>' +
+        '<div class="request-layout"><section class="panel"><div class="panel-head"><div><h2 class="panel-title">Request queue</h2><p class="panel-subtitle">Requests recorded in this pilot service</p></div><label class="visually-hidden" for="request-filter">Filter requests by status</label><select class="field-control" id="request-filter"><option value="all">All statuses</option><option value="pending">Pending</option><option value="matched">Matched</option><option value="cancelled">Cancelled</option></select></div><div class="table-wrap"><table><caption class="visually-hidden">Hospital request queue</caption><thead><tr><th scope="col">Reference</th><th scope="col">Hospital</th><th scope="col">Blood group</th><th scope="col">Units</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead><tbody>' + rows + '</tbody></table></div>' + renderMatchResult() + '</section>' +
         '<section class="panel"><div class="panel-head"><div><h2 class="panel-title">Create request</h2><p class="panel-subtitle">Add a request to the local queue</p></div></div><div class="panel-body"><form id="request-form"><div class="form-grid"><div class="form-field full"><label class="form-label" for="hospital">Hospital location</label><select class="form-input" id="hospital" name="hospital" required><option value="">Select a location</option>' + hospitalOptions + '</select></div><div class="form-field"><label class="form-label" for="blood-group">Blood group</label><select class="form-input" id="blood-group" name="blood_group" required><option value="">Select group</option><option>O-</option><option>O+</option><option>A-</option><option>A+</option><option>B-</option><option>B+</option><option>AB-</option><option>AB+</option></select></div><div class="form-field"><label class="form-label" for="units">Units requested</label><input class="form-input" id="units" name="units_needed" type="number" min="1" max="100" step="1" inputmode="numeric" required></div></div><div class="form-actions"><button class="button" type="submit">Save request</button></div><p class="form-message" id="request-message" role="status" aria-live="polite"></p></form></div></section></div>';
     }
     function renderDonors() {
@@ -451,6 +474,9 @@
       }
       const form = document.getElementById('request-form');
       if (form) form.addEventListener('submit', submitRequest);
+      document.querySelectorAll('[data-match-request]').forEach(function (button) {
+        button.addEventListener('click', runMatch);
+      });
       const donorProfile = document.getElementById('donor-profile');
       if (donorProfile) donorProfile.addEventListener('change', function () { state.selectedDonorRef = donorProfile.value; render(); });
       const availabilityButton = document.getElementById('toggle-donor-availability');
@@ -476,6 +502,23 @@
         showToast('Could not update availability: ' + error.message);
       }
     }
+    async function runMatch(event) {
+      const requestId = Number(event.currentTarget.dataset.matchRequest);
+      if (!Number.isInteger(requestId) || requestId < 1) return;
+      state.matchingRequestId = requestId;
+      state.matchResult = null;
+      render();
+      try {
+        state.matchResult = await api('/match/' + encodeURIComponent(requestId));
+        await refreshRequests();
+        showToast(state.matchResult.matches.length ? 'Ranked candidates are ready.' : 'No current candidates found.');
+      } catch (error) {
+        state.matchResult = { requestId: requestId, error: error.message };
+      } finally {
+        state.matchingRequestId = null;
+        render();
+      }
+    }
     async function submitRequest(event) {
       event.preventDefault();
       const form = event.currentTarget;
@@ -488,12 +531,9 @@
         return;
       }
       const body = {
-        hospital_name: hospital.name,
+        hospital_id: hospital.id,
         blood_group: form.elements.blood_group.value,
-        units_needed: Number(form.elements.units_needed.value),
-        location_city: hospital.city,
-        latitude: Number(hospital.latitude),
-        longitude: Number(hospital.longitude)
+        units_needed: Number(form.elements.units_needed.value)
       };
       submit.disabled = true;
       submit.textContent = 'Saving…';

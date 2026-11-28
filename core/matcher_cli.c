@@ -6,6 +6,16 @@
 #include <string.h>
 
 #define LINE_SIZE 1024
+#define MAX_CANDIDATES 1000000
+
+/* Returns 1 for a complete line, 0 for EOF, and -1 for an overlong/read error. */
+static int read_input_line(char *line, size_t size) {
+    if (!fgets(line, (int)size, stdin)) return feof(stdin) ? 0 : -1;
+    if (strchr(line, '\n') || feof(stdin)) return 1;
+    int ch;
+    while ((ch = fgetc(stdin)) != '\n' && ch != EOF) { }
+    return -1;
+}
 
 static int only_space_after(const char *line, int pos) {
     if (pos < 0) return 0;
@@ -16,7 +26,7 @@ static int only_space_after(const char *line, int pos) {
 static int priority_mode(void) {
     char line[LINE_SIZE]; int severity, used = 0;
     double scarcity, waiting, severity_weight, scarcity_weight, waiting_weight;
-    if (!fgets(line, sizeof line, stdin) ||
+    if (read_input_line(line, sizeof line) != 1 ||
         sscanf(line, "%d\t%lf\t%lf\t%lf\t%lf\t%lf%n", &severity, &scarcity, &waiting,
                &severity_weight, &scarcity_weight, &waiting_weight, &used) != 6 || !only_space_after(line, used)) {
         fputs("invalid priority input\n", stderr); return 2;
@@ -35,7 +45,7 @@ int main(int argc, char **argv) {
     BDFMatchRequest request;
     int group, used = 0;
     long long now, max_consent_age, max_availability_age, max_eta_age;
-    if (!fgets(line, sizeof line, stdin) ||
+    if (read_input_line(line, sizeof line) != 1 ||
         sscanf(line, "%d\t%lf\t%lf\t%lf\t%lf\t%lld\t%lld\t%lld\t%lld\t%lf%n",
                &group, &request.latitude, &request.longitude, &request.radius_km,
                &request.max_eta_minutes, &now, &max_consent_age, &max_availability_age, &max_eta_age,
@@ -50,17 +60,23 @@ int main(int argc, char **argv) {
 
     BDFDonorCandidate *candidates = NULL;
     size_t count = 0, capacity = 0;
-    while (fgets(line, sizeof line, stdin)) {
+    int line_status;
+    while ((line_status = read_input_line(line, sizeof line)) == 1) {
         BDFDonorCandidate d;
         unsigned long long ref;
         long long consent_at, available_at, eta_at;
         int donor_group, consent, available, verified, active;
         used = 0;
-        int fields = sscanf(line, "%llu\t%d\t%lf\t%lf\t%lf\t%d\t%d\t%d\t%d\t%lld\t%lld\t%lld%n",
+        const char *start = line;
+        while (*start == ' ' || *start == '\t') start++;
+        int fields = *start == '-' ? 0 : sscanf(line, "%llu\t%d\t%lf\t%lf\t%lf\t%d\t%d\t%d\t%d\t%lld\t%lld\t%lld%n",
                             &ref, &donor_group, &d.latitude, &d.longitude, &d.eta_minutes,
                             &consent, &available, &verified, &active, &consent_at, &available_at, &eta_at, &used);
         if (fields != 12 || !only_space_after(line, used)) {
             free(candidates); fputs("invalid candidate input\n", stderr); return 2;
+        }
+        if (count >= MAX_CANDIDATES) {
+            free(candidates); fputs("too many candidates\n", stderr); return 2;
         }
         if (count == capacity) {
             size_t next = capacity ? capacity * 2 : 32;
@@ -77,6 +93,9 @@ int main(int argc, char **argv) {
         d.availability_checked_at = (int64_t)available_at;
         d.eta_checked_at = (int64_t)eta_at;
         candidates[count++] = d;
+    }
+    if (line_status < 0) {
+        free(candidates); fputs("candidate line too long or unreadable\n", stderr); return 2;
     }
 
     BDFMatch *matches = count ? (BDFMatch *)malloc(count * sizeof(*matches)) : NULL;

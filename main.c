@@ -154,11 +154,6 @@ static void clear_input(void) {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
-static void press_enter(void) {
-    printf("\n  Press ENTER to continue...");
-    clear_input();
-}
-
 /* ================================================================== */
 /*  Hash Table — O(1) average donor ID lookup                         */
 /* ================================================================== */
@@ -489,7 +484,7 @@ static void request_blood(void) {
     int indices[MAX_DONORS];
     for (int i = 0; i < donor_count; i++) indices[i] = i;
     KDNode *tree = build_kd(indices, donor_count, 0);
-    PriorityQueue q = {{}, 0};
+    PriorityQueue q = {0};
     collect(tree, node_idx, code, severity,
             loc_lats[node_idx], loc_lons[node_idx], &q);
     free_kd(tree);
@@ -567,7 +562,12 @@ static void register_donor(void) {
     d->area[strcspn(d->area, "\n")] = 0;
 
     d->id              = id;
-    strncpy(d->blood, blood_input, sizeof(d->blood) - 1);
+    size_t blood_length = strlen(blood_input);
+    if (blood_length >= sizeof(d->blood)) {
+        printf("  Blood group is too long.\n");
+        return;
+    }
+    memcpy(d->blood, blood_input, blood_length + 1);
     d->blood_code      = bc;
     d->node            = 7;  /* default: City Blood Bank */
     d->available       = 1;

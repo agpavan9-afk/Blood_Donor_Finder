@@ -2,7 +2,7 @@
 
 ## Current status
 
-This repository now contains the original classroom demo plus a separate C11 matching library and a loopback-only Node/SQLite shell with synthetic Bengaluru-area records. The local shell has role-separated staff and donor screens, staff request triage, and donor opt-in/availability controls, but it is still a development pilot, not a hospital-ready application: its role tokens are not hospital authentication, its database is local SQLite, and its candidate ETAs are fixed fixtures. It has no blood-centre, identity, approved-consent, routing, notification, or hospital-system integration. **Do not enter patient or donor information and do not use its match list to support transfusion or donor-selection decisions.**
+This repository contains the original classroom demo plus a separate C11 matching library and a loopback-only Node/SQLite shell with synthetic Bengaluru-area records. The local shell has a combined demonstration dashboard for hospital requests, matching, and synthetic donor availability, but it is still an engineering prototype, not a hospital-ready application. It has no authentication or authorization, hospital tenant isolation, blood-centre integration, donor identity workflow, approved consent process, live routing, notifications, or hospital-system integration; its database is local SQLite and its candidate ETAs are fixtures. **Do not enter patient or donor information and do not use its match list to support transfusion or donor-selection decisions.**
 
 The next implementation should preserve C for the matching and allocation engine. A hospital-facing UI and identity, persistence, routing, messaging, and integration adapters can use other languages and established services.
 
@@ -55,7 +55,7 @@ For an India deployment, validate the current applicable privacy, health-data, b
 3. **Controlled pilot:** after written clinical, privacy, security, and operational approval, enable a small staff-only workflow with trained users, explicit human confirmation, monitoring, and a tested manual fallback.
 4. **Expansion:** only after measured reliability, clinical review, security assessment, interoperability testing, and approval by each participating organization.
 
-The repository has an initial stage 1 code slice, but it has not been compiled or validated in this Windows environment and does not yet meet stage 1 acceptance criteria. A real hospital deployment cannot be completed or validated without a named hospital/blood-centre partner, approved workflow, identity and routing integrations, and accountable clinical/privacy owners.
+The repository now has a compiled and automated-tested stage 1 engineering slice on Windows. Its checks cover strict C compilation, core matching behavior, API integration, response privacy, and persistence. This does not validate clinical policy or make the system ready for a live pilot. A real hospital deployment cannot be completed or validated without a named hospital/blood-centre partner, approved workflow, identity and routing integrations, and accountable clinical, privacy, security, and operational owners.
 
 ## Stage 1 Completion Status
 
@@ -63,9 +63,9 @@ The repository has an initial stage 1 code slice, but it has not been compiled o
 |-----------|-------------|-------|
 | Red‑Black Tree (C) | ✅ | `core/rbtree.c` and header |
 | Skip List (C) | ✅ | `core/skiplist.c` and header |
-| KD‑Tree (C) | ✅ | Included in `main.c` demo |
+| KD‑Tree (C) | ✅ | Operational implementation in `core/matcher.c`; a separate version is demonstrated in `main.c` |
 | Dijkstra routing (C) | ✅ | Demonstrated in demo program |
-| C matching binary | ✅ | `blood_donor_finder.exe` builds via `Makefile` |
+| C matching binary | ✅ | `core/bdf_matcher_cli.exe`; strict build available through `npm run build:c` or `make` |
 | Node.js backend | ✅ | `service/server.mjs` with SQLite, API, rate‑limiting |
 | SQLite schema & demo data | ✅ | Populated on first run |
 | Staff UI | ✅ | `service/index.html` (dashboard) |
@@ -73,4 +73,4 @@ The repository has an initial stage 1 code slice, but it has not been compiled o
 | Audit & logging | ✅ | `audit_event` table and inserts |
 | Rate limiting & validation | ✅ | Middleware in `server.mjs` |
 
-The prototype now satisfies the first‑stage deliverables and can be run locally for demonstration purposes.
+The prototype now satisfies the local engineering portion of the first-stage deliverables and can be run with synthetic records for demonstration purposes. Clinical-policy validation, independent review, and every live-pilot gate listed above remain outstanding.

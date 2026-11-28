@@ -1,57 +1,70 @@
-# Report – Blood Donor Finder Prototype
+# Blood Donor Finder — Technical Report
 
-## Introduction
-The **Blood Donor Finder** prototype demonstrates how advanced data structures can be leveraged to build a performant donor‑matching service.  The system is intentionally small‑scale, using synthetic Bengaluru‑area data, but it showcases architecture patterns that can be extended to a production‑grade hospital‑centric solution.
+## 1. Purpose and scope
 
-## Advanced Data Structures
-| Structure | Purpose in the System | Key Operations | Complexity |
-|-----------|-----------------------|----------------|------------|
-| **Red‑Black Tree** | Index donors by **availability** and **blood group** for O(log n) insertion, deletion and exact‑match queries. | `insert`, `delete`, `search` (by key = `blood_group|ref`) | Insert/Delete/Search: **O(log n)** |
-| **Skip List** | Allows fast **range queries** on geographic coordinates (latitude/longitude) while keeping implementation simplicity. | `insert`, `delete`, `rangeSearch` (by lat/lon bounding box) | Expected **O(log n)** for all operations |
-| **KD‑Tree** (2‑D) | Provides nearest‑neighbour search for the *radius‑based* matching (75 km). | `build`, `nearest`, `radiusSearch` | Build: **O(n log n)**, Query: **O(log n)** average |
-| **Dijkstra (min‑heap)** | Placeholder for future *road‑network* ETA calculations. | `shortestPath` on a small static graph | **O(E log V)** |
+Blood Donor Finder is an offline engineering prototype that demonstrates how advanced data structures can help rank potential blood donors for a hospital request. It uses synthetic Bengaluru-area records only. It is not a clinical decision system, donor registry, blood inventory system, or production hospital application.
 
-The **Red‑Black Tree** and **Skip List** are implemented in C11 (`core/rbtree.c`, `core/skiplist.c`).  Both expose a simple API used by `main.c` to insert synthetic donors and to retrieve candidate lists during matching.  The KD‑Tree is a compact implementation bundled with the demo program.
+The prototype keeps the matching implementation in C11. A local Node.js service provides persistence and an accessible browser interface so the C engine can be exercised as a complete application.
 
-## System Architecture
-The prototype follows a **micro‑service**‑like separation:
-1. **C Matching Engine** – Compiled to `blood_donor_finder.exe`.  It receives command‑line arguments (blood group, request location, radius) and emits JSON containing donor references and a basic relevance score.
-2. **Node.js Backend** – Express server (`service/server.mjs`) wraps the C binary, provides a SQLite persistence layer, rate‑limiting, request validation, and audit logging.
-3. **Frontend UI** – Plain HTML/JS (`service/index.html`) displays donor statistics, request queues and allows staff to toggle donor availability.
-4. **SQLite Database** – Stores donor profiles, hospital requests, notifications, audit events and daily statistics.
+## 2. Implemented architecture
 
-All components run locally; no external network calls are made, satisfying the sandbox constraints.
+| Component | Implementation | Responsibility |
+|---|---|---|
+| Matching engine | `core/matcher.c` and `core/matcher_cli.c` | Validate candidate data, apply preliminary compatibility and freshness filters, perform geographic search, and retain the best-ranked matches |
+| Local API | `service/server.mjs` | Validate requests, resolve trusted hospital coordinates, read/write SQLite, invoke the C process, and return privacy-limited results |
+| Browser interface | `service/index.html` | Show synthetic operational statistics, donor availability controls, hospital requests, and ranked candidate references |
+| Local database | SQLite | Store synthetic donors, hospitals, requests, match state, and audit events |
+| Data-structure demonstration | `main.c` and supporting `core` modules | Demonstrate a Red-Black Tree, Skip List, KD-tree, priority queue, hash table, and Dijkstra graph routing |
 
-## Matching Algorithm
-When a hospital creates a request, the backend invokes the C matcher with the following parameters:
-- Desired **blood group**
-- Request **latitude / longitude**
-- Fixed **radius** of **75 km**
+The operational matcher is compiled as `core/bdf_matcher_cli.exe`. It reads a strict tab-separated request and candidate stream from standard input and writes tab-separated match rows to standard output. It does not receive donor contact details and does not emit them. The service intentionally has no JavaScript matching fallback: a missing, timed-out, or invalid C engine is reported as an error rather than silently changing algorithms.
 
-The engine performs:
-1. **Blood‑group filter** using the Red‑Black Tree index.
-2. **Geographic filter** via the KD‑Tree radius search.
-3. **Availability check** (only donors marked `available = 1`).
-4. **Scoring** – currently a simple distance‑based score; the system records the raw distance for later enrichment.
+## 3. Advanced data structures and algorithms
 
-If the binary is unavailable, a JavaScript fallback reproduces the same logical steps using the Haversine formula.
+### Operational matching path
 
-## Safety & Ethical Considerations
-- **Synthetic data only** – no real patient or donor identifiers are stored.
-- **No clinical decision making** – the matcher supplies *candidate* donors; final eligibility must be confirmed by qualified blood‑centre staff.
-- **Audit trail** – every request creation and match operation is logged in `audit_event` to support traceability.
-- **Rate limiting & validation** – protects the service from accidental overload and malformed inputs.
-- **Disclaimer** – the README explicitly warns that this is a research prototype and must not be used for real transfusion decisions.
+- **Two-dimensional KD-tree:** indexes candidate latitude and longitude for a radius query. Tree construction is approximately `O(n log n)` for the prototype; average spatial queries can prune much of the tree, while the worst case remains `O(n)`.
+- **Bounded binary max-heap:** retains at most the requested number of best candidates. Its root is the least desirable retained match, allowing a better candidate to replace it in `O(log k)` time, where `k` is the result limit.
+- **Haversine distance:** calculates great-circle distance after KD-tree traversal. The pruning logic handles longitude wraparound and polar regions conservatively.
+- **Request priority formula:** a separate C function combines severity, scarcity, and waiting time with validated weights. This demonstrates request-level priority calculation; the current UI does not automatically allocate across hospitals.
 
-## Performance Observations
-During local testing with 20 donors and 5 concurrent requests the matching latency measured **≈ 12 ms** per request, dominated by binary startup time.  The logarithmic lookup characteristics of the Red‑Black Tree and Skip List guarantee scalability; a dataset of 10 000 donors would still keep query time well under 100 ms on typical development hardware.
+### Classroom demonstration path
 
-## Future Work
-- Replace the static SQLite store with a PostgreSQL cluster for multi‑site deployments.
-- Integrate a real routing service (e.g., OpenStreetMap) to compute ETA‑aware scores.
-- Expand audit logging with immutable append‑only storage and GDPR‑compliant retention policies.
-- Harden the API with OAuth2/OIDC and role‑based access control.
-- Add automated unit tests for each C data‑structure and for the backend endpoints.
+The standalone `blood_donor_finder.exe` additionally demonstrates:
 
----
-*Prepared by the Antigravity AI assistant on 2026‑11‑22.*
+- a Red-Black Tree for balanced `O(log n)` search, insertion, and deletion;
+- a probabilistic Skip List with expected `O(log n)` operations;
+- a hash table for key-based lookup;
+- a priority queue; and
+- Dijkstra shortest-path search on a demonstration graph.
+
+These structures satisfy the educational portion of the project, but the Red-Black Tree, Skip List, and Dijkstra demo are not falsely presented as part of the current API matching path.
+
+## 4. Matching workflow
+
+1. Hospital staff select one of the server-owned synthetic hospital records and enter a request.
+2. The API validates the blood group, severity, units, and hospital identifier. Client-supplied hospital coordinates are not trusted.
+3. SQLite supplies active candidate records to the C process.
+4. The C engine excludes records that are inactive, unavailable, unverified, outside consent/availability/ETA freshness limits, incompatible for the preliminary red-cell search, beyond the radius, or beyond the ETA limit.
+5. Eligible candidates receive a normalized demonstration score combining proximity and fixture ETA.
+6. The bounded heap returns the best candidates; deterministic tie-breakers prefer lower ETA, then shorter distance, then donor reference.
+7. The API returns opaque candidate references, distance, ETA, and score. Public responses omit donor coordinates and contact details.
+
+ABO/Rh filtering is only a preliminary search aid. It does not establish donor eligibility, component suitability, crossmatch compatibility, or permission to contact a donor.
+
+## 5. Verification
+
+The automated `npm test` workflow performs:
+
+- strict C11 compilation with `-Wall -Wextra -Wpedantic -Werror`;
+- C matcher checks for compatibility, stale records, ranking, request priority, antimeridian distance handling, and invalid input;
+- a standalone console smoke test;
+- Node.js and browser-script syntax checks; and
+- API integration tests covering request validation, availability updates, C-process matching, response privacy, persistence, idempotent statistics, malformed JSON, and UI delivery.
+
+The verified Windows toolchain is MSYS2 UCRT64 GCC 16.1.0. Build scripts use `CC` when supplied, otherwise `gcc` from `PATH`; no machine-specific legacy MinGW path is embedded in the repository.
+
+## 6. Safety, research, and future development
+
+The current database is local and synthetic, ETAs are fixtures, and there is no authentication, hospital tenant isolation, approved donor consent/identity workflow, notification provider, clinical screening integration, or live routing service. It must not receive real patient or donor data or be used for operational decisions.
+
+A controlled hospital pilot would require clinical, privacy, legal, security, and operational ownership; hospital SSO/MFA and role authorization; approved consent and verification flows; encrypted production storage and backups; auditable policy versions; real routing and messaging adapters; monitoring and incident response; independent security testing; and validation against applicable Indian and Karnataka requirements. Only after those gates could performance studies, publication, intellectual-property review, partnerships, or commercialization be evaluated responsibly.

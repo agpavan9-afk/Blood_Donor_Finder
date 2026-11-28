@@ -145,15 +145,16 @@ static void search_tree(Search *s, size_t node_index) {
         offer_match(s, (BDFMatch){d->donor_ref, km, d->eta_minutes, score});
     }
 
-    double delta_km;
     if (node->axis == 0) {
-        delta_km = (r->latitude - d->latitude) * (EARTH_KM * 0.017453292519943295);
+        double delta_km = (r->latitude - d->latitude) * (EARTH_KM * 0.017453292519943295);
+        if (delta_km <= r->radius_km) search_tree(s, node->left);
+        if (delta_km >= -r->radius_km) search_tree(s, node->right);
     } else {
-        double scale = cos(to_radians(r->latitude));
-        delta_km = (r->longitude - d->longitude) * (EARTH_KM * 0.017453292519943295) * scale;
+        /* Longitude is circular and its physical scale approaches zero near the poles.
+           Searching both branches prevents false negatives at the antimeridian and poles. */
+        search_tree(s, node->left);
+        search_tree(s, node->right);
     }
-    if (delta_km <= r->radius_km) search_tree(s, node->left);
-    if (delta_km >= -r->radius_km) search_tree(s, node->right);
 }
 
 int bdf_match(const BDFDonorCandidate *candidates, size_t candidate_count,

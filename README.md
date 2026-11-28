@@ -1,81 +1,85 @@
 # Blood Donor Finder
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#)
+Blood Donor Finder is a Bengaluru-focused research and education prototype for shortlisting blood-donor records for hospital requests. Its matching core is written in C11; a Node.js/Express service connects the compiled engine to SQLite and a responsive HTML/CSS/JavaScript interface.
 
-## Overview
-The **Blood Donor Finder** is a prototype platform that matches hospital blood‑group requests with eligible donors using an advanced C matching engine (Red‑Black Tree & Skip List) and a lightweight Node.js/SQLite API.  The project demonstrates:
+> **Safety status:** this repository uses synthetic demonstration data. It is not approved for clinical decisions, donor outreach, or storage of real donor or patient data.
 
-- **Advanced data structures** in C (Red‑Black Tree, Skip List) and their application to donor availability indexing.
-- A **cross‑language stack**: C core → Node.js backend → vanilla HTML/JS UI.
-- **Production‑style components** (rate‑limiting, request validation, CORS, environment configuration, audit logging).
-- **Synthetic Bengaluru‑area dataset** for safe offline demonstration.
+## What the project demonstrates
 
-> **⚠️ Disclaimer** – This is a research/education prototype.  It must **not** be used for real clinical decision‑making or donor outreach without full regulatory, privacy, and clinical review.
+- A C KD-tree for geographic radius search.
+- A bounded binary max-heap for ranked candidates.
+- Preliminary ABO/Rh red-cell compatibility and freshness filters.
+- C request-priority calculation for severity, scarcity, and waiting time.
+- A separate C console demonstration of a Red-Black Tree, Skip List, KD-tree, heap, hash table, and Dijkstra graph routing.
+- An Express API, SQLite persistence, audit events, request statistics, and a professional staff/donor demonstration UI.
+- Opaque donor references in match responses; matching coordinates and donor names are not returned together.
 
-## Architecture
-```
-+-------------------+      +-------------------+      +-------------------+
-|  C Matching Engine|<---->|   Node.js API     |<---->|   SQLite DB      |
-| (rbtree/skiplist) |      | (Express)        |      | (donor, request) |
-+-------------------+      +-------------------+      +-------------------+
-          ^                         ^                       ^
-          |                         |                       |
-          |                         |                       |
-   +------+-----+          +--------+------+   +------------+---------+
-   |  CLI / Demo |          | Front‑end UI |   |   Audit & Logging   |
-   +------------+          +-------------+   +----------------------+
-```
+The C engine only creates a technical shortlist. It does not establish donation eligibility, blood-component suitability, crossmatch compatibility, or authorization to contact a donor.
 
-## Features
-- **Red‑Black Tree** and **Skip List** for fast donor insert/search (O(log n)).
-- **KD‑Tree** spatial index for geographic proximity.
-- **Dijkstra** routing placeholder for ETA calculations.
-- **Rate‑limited REST API** (`/api/*`).
-- **Dynamic matching** via compiled C binary (`blood_donor_finder.exe`) with a JavaScript fallback.
-- **Full UI** (staff dashboard) with dark‑mode toggle, donor registry view, and statistics panel.
-- **Audit trail** for every request and match operation.
-- **Synthetic data** for 20 Bengaluru donors and demo hospital requests.
+## Application flow
 
-## Quick‑Start (Windows)
+1. A synthetic donor profile updates its availability flag.
+2. Hospital staff select one of the configured Bengaluru pilot hospitals, a blood group, and the required units.
+3. The server supplies trusted hospital coordinates and current synthetic donor snapshots to the C executable through a tab-separated interface.
+4. The C engine filters and ranks compatible, current, available records by distance and travel-time score.
+5. Staff see opaque candidate references and must still follow an approved clinical verification and outreach process.
+
+## Requirements
+
+- Node.js 20.17.0 or newer
+- npm
+- A C11 GCC-compatible compiler on `PATH`
+
+On Windows, verify the active compiler before building:
+
 ```powershell
-# 1. Install Node.js dependencies (if not already present)
-npm install
-
-# 2. Build the C demo (requires MinGW gcc)
-make
-
-# 3. Run the backend (default port 3000)
-node service\server.mjs
-
-# 4. Open the UI in a browser
-start service\index.html
+Get-Command gcc
+gcc --version
 ```
 
-The UI talks to `http://localhost:3000/api/...`.  The C binary is expected at `../blood_donor_finder.exe` relative to the `service` folder (the `Makefile` places it in the project root).
+The build scripts use `gcc` from `PATH`; they do not contain a machine-specific compiler path. Set `CC` if a different compiler command is required.
 
-## API Reference (selected endpoints)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/health` | Simple health check |
-| `GET` | `/api/stats` | Daily aggregated statistics |
-| `GET` | `/api/donors` | List all donors (public fields) |
-| `GET` | `/api/donors/:ref` | Detailed donor record |
-| `PUT` | `/api/donors/:ref/availability` | Toggle donor availability |
-| `GET` | `/api/blood-groups` | Static catalogue of blood groups |
-| `GET` | `/api/hospitals` | Demo hospital list |
-| `POST`| `/api/requests` | Create a new hospital blood request |
-| `GET`| `/api/match/:requestId` | Run the C matcher (75 km radius) |
-| `GET`| `/api/match-js/:requestId` | JavaScript fallback matcher |
+## Run locally
 
-## Build & Test
-- **Compile C core**: `make` (produces `blood_donor_finder.exe`).
-- **Run unit tests** (if added): `make test` (placeholder).
-- **Lint**: `npm run lint` (optional, uses eslint).
+From the project directory:
 
-## Documentation
-- `REPORT.md` – detailed academic report (≈ 800 words) covering data‑structure design, algorithmic complexity, system architecture, and safety considerations.
-- `HOSPITAL_PILOT_BLUEPRINT.md` – pilot roadmap and compliance checklist (updated with Stage 1 completion table).
+```powershell
+npm install
+npm run build:c
+npm test
+npm start
+```
 
-## License
-MIT License – see `LICENSE` file.
+Then open [http://127.0.0.1:3000](http://127.0.0.1:3000). Do not open `service/index.html` directly; the page is designed to be served by the local API.
+
+The first start creates `blood_donor_finder.db` and seeds 20 synthetic donor records. Database and executable files are excluded from Git.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run build:c` | Strictly compile the console demo and C matcher |
+| `npm run check` | Check the Node.js source files for syntax errors |
+| `npm test` | Rebuild and test C behavior, UI script syntax, API integration, privacy boundaries, and persistence |
+| `npm start` | Start the local service on `127.0.0.1:3000` |
+
+The optional environment variables are `HOST`, `PORT`, `DB_FILE`, `MATCHER_BINARY`, and `CC`. Keep `HOST=127.0.0.1` for this unauthenticated local demonstration.
+
+## Main API routes
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Service status |
+| `GET` | `/api/hospitals` | Configured synthetic hospital locations |
+| `GET` | `/api/donors` | Public synthetic donor directory fields |
+| `PUT` | `/api/donors/:ref/availability` | Set synthetic availability to `0` or `1` |
+| `POST` | `/api/requests` | Create a hospital request |
+| `GET` | `/api/requests` | List recent requests |
+| `GET` | `/api/match/:requestId` | Run the compiled C matcher |
+| `GET` | `/api/stats` | Read local daily counters |
+
+## Production gap
+
+Before any real pilot, the local adapter must be replaced or extended with hospital SSO/MFA, role and tenant authorization, an approved consent and donor-identity workflow, clinical eligibility checks, verified blood-centre data, a real routing provider, encrypted production storage, secrets management, notification controls, immutable audit retention, monitoring, backup and recovery, incident response, security testing, and hospital/legal approval under applicable Indian requirements. The static ETA fixtures and score weights in this repository are demonstration values only.
+
+See [HOSPITAL_PILOT_BLUEPRINT.md](HOSPITAL_PILOT_BLUEPRINT.md), [REPORT.md](REPORT.md), and [core/README.md](core/README.md) for the research, clinical-boundary, and C-interface details.
