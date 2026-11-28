@@ -82,4 +82,4 @@ The optional environment variables are `HOST`, `PORT`, `DB_FILE`, `MATCHER_BINAR
 
 Before any real pilot, the local adapter must be replaced or extended with hospital SSO/MFA, role and tenant authorization, an approved consent and donor-identity workflow, clinical eligibility checks, verified blood-centre data, a real routing provider, encrypted production storage, secrets management, notification controls, immutable audit retention, monitoring, backup and recovery, incident response, security testing, and hospital/legal approval under applicable Indian requirements. The static ETA fixtures and score weights in this repository are demonstration values only.
 
-See [HOSPITAL_PILOT_BLUEPRINT.md](HOSPITAL_PILOT_BLUEPRINT.md), [REPORT.md](REPORT.md), and [core/README.md](core/README.md) for the research, clinical-boundary, and C-interface details.
+The root README is the single source of setup, workflow, safety, and deployment-gap guidance for this prototype.
